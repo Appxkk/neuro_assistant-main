@@ -3,10 +3,17 @@ from datetime import datetime
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from app.services.mailing_service import send_mailing
+from app.services.auth_service import (
+    ACTION_PERMISSIONS,
+    get_current_user_from_request,
+    normalize_access_level,
+    prepare_employee_auth,
+    require_permission,
+)
 
 
 load_dotenv()
@@ -42,7 +49,7 @@ def get_supabase_headers():
 def get_employees():
     url = (
         f"{SUPABASE_URL}/rest/v1/employees"
-        "?select=id,full_name,position,department"
+        "?select=id,full_name,position,department,access_level"
         "&order=id.asc"
     )
 
@@ -68,6 +75,7 @@ def get_employees():
                     "name": row["full_name"],
                     "position": row.get("position"),
                     "department": row.get("department"),
+                    "access_level": row.get("access_level"),
                 }
                 for row in rows
             ]
@@ -177,25 +185,31 @@ def get_orders():
 
 
 @router.post("/confirm")
-def confirm_action(request: ConfirmActionRequest):
-    if request.action == "create_order":
-        return create_order(request.payload)
+def confirm_action(body: ConfirmActionRequest, request: Request):
+    user = get_current_user_from_request(request)
+    required_permission = ACTION_PERMISSIONS.get(body.action)
 
-    if request.action == "create_employee":
-        return create_employee(request.payload)
+    if required_permission:
+        require_permission(user, required_permission)
 
-    if request.action == "create_sale":
-        return create_sale(request.payload)
+    if body.action == "create_order":
+        return create_order(body.payload)
 
-    if request.action == "create_task":
-        return create_task(request.payload)
+    if body.action == "create_employee":
+        return create_employee(body.payload)
 
-    if request.action == "send_mailing":
-        return send_mailing(request.payload)
+    if body.action == "create_sale":
+        return create_sale(body.payload)
+
+    if body.action == "create_task":
+        return create_task(body.payload)
+
+    if body.action == "send_mailing":
+        return send_mailing(body.payload)
 
     raise HTTPException(
         status_code=400,
-        detail=f"Неизвестное действие: {request.action}"
+        detail=f"Неизвестное действие: {body.action}"
     )
 
 
@@ -270,6 +284,7 @@ def create_employee(payload: dict):
     full_name = payload.get("full_name")
     position = payload.get("position")
     department = payload.get("department")
+    access_level = normalize_access_level(payload.get("access_level"))
 
     if not full_name:
         raise HTTPException(status_code=400, detail="Не указано ФИО сотрудника")
@@ -284,6 +299,7 @@ def create_employee(payload: dict):
         "full_name": full_name,
         "position": position,
         "department": department,
+        "access_level": access_level,
         "created_at": datetime.utcnow().isoformat(),
     }
 
@@ -305,9 +321,19 @@ def create_employee(payload: dict):
 
         created_rows = response.json()
 
+        if created_rows:
+            credentials = prepare_employee_auth(int(created_rows[0]["id"]))
+            created_rows[0]["initial_username"] = credentials["username"]
+            created_rows[0]["initial_password"] = credentials["password"]
+            created_rows[0]["must_change_password"] = True
+
         return {
             "status": "success",
-            "result_text": "Сотрудник успешно добавлен в базу данных",
+            "result_text": (
+                "Сотрудник успешно добавлен. "
+                f"Первичный логин: {created_rows[0].get('initial_username') if created_rows else '—'}. "
+                f"Первичный пароль: {created_rows[0].get('initial_password') if created_rows else '—'}"
+            ),
             "data": created_rows,
         }
 

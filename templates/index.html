@@ -37,6 +37,16 @@
         </nav>
       </div>
 
+      <div class="user-panel">
+        <p>Текущий пользователь</p>
+        <h3 id="currentUserName">{{ user.full_name if user else "—" }}</h3>
+        <span id="currentUserAccessLevel">{{ user.access_level if user else "—" }}</span>
+        <div class="user-panel-actions">
+          <button id="changePasswordBtn" type="button">Пароль</button>
+          <button id="logoutBtn" type="button">Выйти</button>
+        </div>
+      </div>
+
       <div class="system-status">
         <p id="systemStatusLabel">Статус системы</p>
         <h3 id="systemStatusText">Готов к приёму команд</h3>
@@ -825,6 +835,36 @@
         <button id="helpChatSendBtn" class="help-chat-send" type="button">
           Отправить
         </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="passwordOverlay" class="confirm-overlay hidden">
+    <div class="confirm-modal password-modal">
+      <div class="confirm-modal-header">
+        <div>
+          <h3>Смена пароля</h3>
+          <p>После первого входа замените первичный пароль на свой.</p>
+        </div>
+      </div>
+
+      <div class="confirm-modal-body">
+        <div class="confirm-row">
+          <span class="confirm-key">Текущий пароль</span>
+          <input id="currentPasswordInput" class="confirm-input" type="password" autocomplete="current-password" />
+        </div>
+
+        <div class="confirm-row">
+          <span class="confirm-key">Новый пароль</span>
+          <input id="newPasswordInput" class="confirm-input" type="password" autocomplete="new-password" />
+        </div>
+
+        <p id="passwordChangeMessage" class="auth-inline-message"></p>
+      </div>
+
+      <div class="confirm-modal-actions">
+        <button id="passwordCancelBtn" class="btn btn-light custom-btn" type="button">Отмена</button>
+        <button id="passwordSaveBtn" class="btn btn-primary custom-btn" type="button">Сохранить</button>
       </div>
     </div>
   </div>

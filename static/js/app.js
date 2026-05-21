@@ -1,3 +1,15 @@
+const originalFetch = window.fetch.bind(window);
+
+window.fetch = async (...args) => {
+  const response = await originalFetch(...args);
+
+  if (response.status === 401 && !window.location.pathname.startsWith("/login")) {
+    window.location.href = "/login";
+  }
+
+  return response;
+};
+
 const commandsToday = document.getElementById("commandsToday");
 const successCommands = document.getElementById("successCommands");
 const activeTasksCount = document.getElementById("activeTasksCount");
@@ -72,6 +84,16 @@ const manualBuildChartBtn = document.getElementById("manualBuildChartBtn");
 const manualDownloadPdfBtn = document.getElementById("manualDownloadPdfBtn");
 const manualClearHistoryBtn = document.getElementById("manualClearHistoryBtn");
 const manualOpenHelpBtn = document.getElementById("manualOpenHelpBtn");
+const currentUserName = document.getElementById("currentUserName");
+const currentUserAccessLevel = document.getElementById("currentUserAccessLevel");
+const logoutBtn = document.getElementById("logoutBtn");
+const changePasswordBtn = document.getElementById("changePasswordBtn");
+const passwordOverlay = document.getElementById("passwordOverlay");
+const currentPasswordInput = document.getElementById("currentPasswordInput");
+const newPasswordInput = document.getElementById("newPasswordInput");
+const passwordChangeMessage = document.getElementById("passwordChangeMessage");
+const passwordCancelBtn = document.getElementById("passwordCancelBtn");
+const passwordSaveBtn = document.getElementById("passwordSaveBtn");
 
 const confirmActionOverlay = document.getElementById("confirmActionOverlay");
 const confirmActionBody = document.getElementById("confirmActionBody");
@@ -116,6 +138,7 @@ let pendingAction = null;
 let orderManagers = [];
 let actionEmployees = [];
 let actionOrders = [];
+let currentUser = null;
 
 const defaultUiSettings = {
   ollamaModel: "qwen2.5:1.5b",
@@ -859,6 +882,9 @@ function getPrettyRows(item, intent) {
           name: "Name",
           position: "Position",
           department: "Department",
+          accessLevel: "Access level",
+          username: "Initial login",
+          password: "Initial password",
         }
       : {
           quantity: "Количество",
@@ -878,6 +904,9 @@ function getPrettyRows(item, intent) {
           name: "ФИО",
           position: "Должность",
           department: "Отдел",
+          accessLevel: "Уровень доступа",
+          username: "Первичный логин",
+          password: "Первичный пароль",
         };
 
   if (intent === "show_sales" || intent === "create_sale") {
@@ -918,6 +947,9 @@ function getPrettyRows(item, intent) {
       [labels.name, item.full_name],
       [labels.position, item.position],
       [labels.department, item.department],
+      [labels.accessLevel, getAccessLevelLabel(item.access_level)],
+      [labels.username, item.initial_username],
+      [labels.password, item.initial_password],
       [labels.date, formatDateTime(item.created_at)],
     ];
   }
@@ -1131,6 +1163,117 @@ function showPage(pageName) {
   openPageByVoice(pageName);
 }
 
+function userCan(permission) {
+  return Boolean(currentUser?.permissions?.includes(permission));
+}
+
+function setElementPermission(element, permission) {
+  if (!element) return;
+
+  element.style.display = userCan(permission) ? "" : "none";
+}
+
+function applyAccessRestrictions() {
+  setElementPermission(document.getElementById("navActions"), "use_actions");
+  setElementPermission(document.getElementById("navHistory"), "view_history");
+  setElementPermission(document.getElementById("navSettings"), "manage_settings");
+  setElementPermission(manualCreateOrderBtn, "create_records");
+  setElementPermission(manualCreateSaleBtn, "create_records");
+  setElementPermission(manualCreateTaskBtn, "create_records");
+  setElementPermission(manualCreateEmployeeBtn, "manage_employees");
+  setElementPermission(manualSendMailingBtn, "send_mailing");
+  setElementPermission(manualClearHistoryBtn, "manage_history");
+  setElementPermission(clearHistoryBtn, "manage_history");
+  setElementPermission(document.querySelector(".mode-switcher"), "manage_settings");
+}
+
+function getAccessLevelLabel(accessLevel) {
+  const labels = {
+    low: "Низкий доступ",
+    medium: "Средний доступ",
+    high: "Высокий доступ",
+  };
+
+  return labels[accessLevel] || accessLevel || "—";
+}
+
+async function loadCurrentUser() {
+  const response = await fetch("/api/auth/me");
+
+  if (!response.ok) return;
+
+  const data = await response.json();
+  currentUser = data.user;
+
+  if (currentUserName) {
+    currentUserName.textContent = currentUser?.full_name || currentUser?.username || "—";
+  }
+
+  if (currentUserAccessLevel) {
+    currentUserAccessLevel.textContent = getAccessLevelLabel(currentUser?.access_level);
+  }
+
+  applyAccessRestrictions();
+
+  if (currentUser?.must_change_password) {
+    showPasswordModal("Нужно заменить первичный пароль.");
+  }
+}
+
+function showPasswordModal(message = "") {
+  if (passwordChangeMessage) {
+    passwordChangeMessage.textContent = message;
+    passwordChangeMessage.classList.remove("error");
+  }
+
+  passwordOverlay?.classList.remove("hidden");
+}
+
+function hidePasswordModal() {
+  passwordOverlay?.classList.add("hidden");
+
+  if (currentPasswordInput) currentPasswordInput.value = "";
+  if (newPasswordInput) newPasswordInput.value = "";
+}
+
+async function logout() {
+  await fetch("/api/auth/logout", {
+    method: "POST",
+  });
+
+  window.location.href = "/login";
+}
+
+async function changePassword() {
+  if (!currentPasswordInput || !newPasswordInput || !passwordChangeMessage) return;
+
+  passwordChangeMessage.textContent = "";
+  passwordChangeMessage.classList.remove("error");
+
+  const response = await fetch("/api/auth/change-password", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      current_password: currentPasswordInput.value,
+      new_password: newPasswordInput.value,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    passwordChangeMessage.textContent = data.detail || "Не удалось сменить пароль";
+    passwordChangeMessage.classList.add("error");
+    return;
+  }
+
+  currentUser = data.user;
+  passwordChangeMessage.textContent = "Пароль обновлён";
+  setTimeout(hidePasswordModal, 700);
+}
+
 function openManualConfirmAction(recognizedText, action, payload, resultText) {
   showConfirmActionModal({
     recognized_text: recognizedText,
@@ -1168,6 +1311,7 @@ function openManualCreateEmployee() {
       full_name: "",
       position: "Менеджер",
       department: "Продажи",
+      access_level: "low",
     },
     "Требуется подтверждение добавления сотрудника"
   );
@@ -1791,6 +1935,15 @@ async function showConfirmActionModal(actionData) {
         <span class="confirm-key">Отдел</span>
         <input id="confirmEmployeeDepartmentInput" class="confirm-input" value="${escapeHtml(payload.department || "Продажи")}" />
       </div>
+
+      <div class="confirm-row">
+        <span class="confirm-key">Уровень доступа</span>
+        <select id="confirmEmployeeAccessLevelSelect" class="confirm-select">
+          <option value="low" ${(payload.access_level || "low") === "low" ? "selected" : ""}>Низкий</option>
+          <option value="medium" ${payload.access_level === "medium" ? "selected" : ""}>Средний</option>
+          <option value="high" ${payload.access_level === "high" ? "selected" : ""}>Высокий</option>
+        </select>
+      </div>
     `;
   } else if (action === "create_sale") {
     await loadActionOrders();
@@ -2091,6 +2244,8 @@ function collectPendingPayloadFromModal() {
       document.getElementById("confirmEmployeePositionInput")?.value?.trim() || payload.position;
     payload.department =
       document.getElementById("confirmEmployeeDepartmentInput")?.value?.trim() || payload.department;
+    payload.access_level =
+      document.getElementById("confirmEmployeeAccessLevelSelect")?.value || payload.access_level || "low";
   }
 
   if (action === "create_sale") {
@@ -2279,6 +2434,21 @@ function trySelectPendingFieldByVoice(text) {
         payload.department = formatted;
         setInputValue("confirmEmployeeDepartmentInput", formatted);
         setVoiceFieldResult(`Отдел изменён: ${formatted}`);
+        return true;
+      }
+    }
+
+    if (normalized.includes("доступ") || normalized.includes("уровень")) {
+      let accessLevel = null;
+
+      if (normalized.includes("высок")) accessLevel = "high";
+      if (normalized.includes("средн")) accessLevel = "medium";
+      if (normalized.includes("низк")) accessLevel = "low";
+
+      if (accessLevel) {
+        payload.access_level = accessLevel;
+        setSelectValue("confirmEmployeeAccessLevelSelect", accessLevel);
+        setVoiceFieldResult(`Уровень доступа изменён: ${getAccessLevelLabel(accessLevel)}`);
         return true;
       }
     }
@@ -3446,6 +3616,11 @@ helpChatInput?.addEventListener("keydown", (event) => {
   }
 });
 
+logoutBtn?.addEventListener("click", logout);
+changePasswordBtn?.addEventListener("click", () => showPasswordModal());
+passwordCancelBtn?.addEventListener("click", hidePasswordModal);
+passwordSaveBtn?.addEventListener("click", changePassword);
+
 document.querySelectorAll(".help-quick-btn").forEach((button) => {
   button.addEventListener("click", () => {
     const question = button.dataset.helpQuestion;
@@ -3453,6 +3628,11 @@ document.querySelectorAll(".help-quick-btn").forEach((button) => {
   });
 });
 
-loadUiSettings();
-loadLLMMode();
-loadDashboard();
+async function initApp() {
+  loadUiSettings();
+  await loadCurrentUser();
+  loadLLMMode();
+  loadDashboard();
+}
+
+initApp();

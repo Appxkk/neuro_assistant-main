@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Вход | Нейропомощник</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+</head>
+<body class="auth-page">
+  <main class="auth-shell">
+    <section class="auth-card">
+      <p class="auth-kicker">Доступ для сотрудников</p>
+      <h1>Нейропомощник</h1>
+      <p class="auth-subtitle">Войдите под учётной записью работника компании.</p>
+
+      <form id="loginForm" class="auth-form">
+        <label>
+          Логин
+          <input id="loginUsername" type="text" autocomplete="username" required />
+        </label>
+
+        <label>
+          Пароль
+          <input id="loginPassword" type="password" autocomplete="current-password" required />
+        </label>
+
+        <p id="loginError" class="auth-error"></p>
+
+        <button class="auth-submit" type="submit">Войти</button>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById("loginForm");
+    const errorBox = document.getElementById("loginError");
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      errorBox.textContent = "";
+
+      const username = document.getElementById("loginUsername").value.trim();
+      const password = document.getElementById("loginPassword").value;
+
+      try {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ username, password }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          errorBox.textContent = data.detail || "Не удалось войти";
+          return;
+        }
+
+        window.location.href = "/";
+      } catch (error) {
+        errorBox.textContent = "Сервер авторизации недоступен";
+      }
+    });
+  </script>
+</body>
+</html>

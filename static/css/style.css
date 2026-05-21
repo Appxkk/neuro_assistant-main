@@ -28,6 +28,90 @@ body {
   min-height: 100vh;
 }
 
+.auth-page {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg-main);
+}
+
+.auth-shell {
+  width: min(430px, 100%);
+}
+
+.auth-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 30px;
+}
+
+.auth-kicker {
+  margin: 0 0 8px;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.auth-card h1 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 900;
+}
+
+.auth-subtitle {
+  margin: 8px 0 22px;
+  color: var(--text-muted);
+}
+
+.auth-form {
+  display: grid;
+  gap: 16px;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--text-muted);
+  font-weight: 800;
+}
+
+.auth-form input {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 13px 14px;
+  background: #ffffff;
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.auth-submit {
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 18px;
+  background: var(--primary);
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.auth-error,
+.auth-inline-message {
+  min-height: 20px;
+  margin: 0;
+  color: var(--danger);
+  font-weight: 800;
+}
+
+.auth-inline-message {
+  color: var(--success);
+}
+
+.auth-inline-message.error {
+  color: var(--danger);
+}
+
 button,
 input,
 select {
@@ -101,6 +185,52 @@ select {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 22px;
   padding: 20px;
+}
+
+.user-panel {
+  background: var(--sidebar-card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  padding: 18px;
+  color: #ffffff;
+}
+
+.user-panel p {
+  margin: 0 0 8px;
+  color: #94a3b8;
+}
+
+.user-panel h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.user-panel span {
+  display: inline-block;
+  color: #bfdbfe;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.user-panel-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.user-panel-actions button {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 9px 10px;
+  font-weight: 800;
+}
+
+.user-panel-actions button:hover {
+  background: var(--primary);
 }
 
 .system-status p {
