@@ -8,6 +8,8 @@ services:
     envVars:
       - key: APP_ENV
         value: production
+      - key: PYTHON_VERSION
+        value: 3.11.11
       - key: LLM_PROVIDER
         value: hybrid
       - key: LOCAL_PARSER_ENABLED
