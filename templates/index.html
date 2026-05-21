@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Нейропомощник</title>
+
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+</head>
+
+<body>
+  <div class="app-layout">
+
+    <aside class="sidebar">
+      <div>
+        <div class="sidebar-header">
+          <p id="projectSubtitle" class="sidebar-subtitle">Дипломный проект</p>
+          <h1 id="projectTitle">Нейропомощник для автоматизации бизнес-процессов</h1>
+        </div>
+
+        <nav class="sidebar-nav">
+          <button id="navDashboard" class="nav-item active" data-page="dashboard">Главная</button>
+          <button id="navVoice" class="nav-item" data-page="voice">Голосовые команды</button>
+          <button id="navActions" class="nav-item" data-page="actions">Действия</button>
+          <button id="navOrders" class="nav-item" data-page="orders">Заказы</button>
+          <button id="navTasks" class="nav-item" data-page="tasks">Задачи</button>
+          <button id="navReports" class="nav-item" data-page="reports">Отчёты</button>
+          <button id="navHistory" class="nav-item" data-page="history">История</button>
+          <button id="navSettings" class="nav-item" data-page="settings">Настройки</button>
+        </nav>
+      </div>
+
+      <div class="system-status">
+        <p id="systemStatusLabel">Статус системы</p>
+        <h3 id="systemStatusText">Готов к приёму команд</h3>
+        <span id="onlineStatusText">● Онлайн</span>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="container-fluid">
+
+        <div id="pageDashboard" class="page-section active-page">
+
+          <header class="page-header">
+            <div>
+              <h2 id="dashboardTitle">Панель управления</h2>
+              <p id="dashboardSubtitle">Голосовое управление заказами, задачами и отчётами</p>
+            </div>
+
+            <div class="header-actions">
+              <div class="mode-switcher">
+                <span id="headerNlpModeLabel" class="mode-label">Режим NLP:</span>
+
+                <button id="ollamaModeBtn" class="btn custom-btn mode-btn">
+                  Ollama
+                </button>
+
+                <button id="localModeBtn" class="btn custom-btn mode-btn">
+                  Local parser
+                </button>
+              </div>
+
+              <button id="historyButton" class="btn btn-light custom-btn" data-open-page="history">
+                История команд
+              </button>
+            </div>
+          </header>
+
+          <section class="stats-grid">
+            <div class="stat-card">
+              <p id="statCommandsLabel">Команд сегодня</p>
+              <h3 id="commandsToday">0</h3>
+            </div>
+
+            <div class="stat-card">
+              <p id="statSuccessLabel">Успешно обработано</p>
+              <h3 id="successCommands">0</h3>
+            </div>
+
+            <div class="stat-card">
+              <p id="statTasksLabel">Активных задач</p>
+              <h3 id="activeTasksCount">0</h3>
+            </div>
+
+            <div class="stat-card">
+              <p id="statReportsLabel">Отчётов сформировано</p>
+              <h3 id="reportsCount">0</h3>
+            </div>
+          </section>
+
+          <section class="content-grid">
+            <div class="voice-card card-custom large-card">
+              <div class="card-header-custom">
+                <div>
+                  <h3 id="voiceInputTitle">Голосовой ввод</h3>
+                  <p id="voiceInputSubtitle">Нажмите кнопку и произнесите команду</p>
+                </div>
+
+                <span id="microphoneStatus" class="microphone-status">Микрофон готов</span>
+              </div>
+
+              <div class="voice-box">
+                <button id="recordBtn" class="record-button">🎤</button>
+                <h4 id="voiceTitle">Скажите команду</h4>
+                <p id="voiceExampleText">
+                  Например: «Покажи продажи за март», «Найди заказ 152»,
+                  «Создай задачу менеджеру Иванову»
+                </p>
+              </div>
+
+              <div class="voice-info-grid">
+                <div class="info-box">
+                  <p id="recognizedTextLabel">Распознанный текст</p>
+                  <h4 id="recognizedText">—</h4>
+                </div>
+
+                <div class="info-box">
+                  <p id="interpretationLabel">Интерпретация команды</p>
+
+                  <div class="compact-result">
+                    <div class="compact-badges">
+                      <span id="intentBadge" class="intent-badge">—</span>
+                      <span id="sourceBadge" class="source-badge">—</span>
+                    </div>
+
+                    <div class="compact-section">
+                      <span id="resultLabel" class="compact-label">Результат</span>
+                      <p id="resultTextBlock" class="compact-result-text">
+                        После выполнения команды здесь появится краткий результат.
+                      </p>
+                    </div>
+
+                    <div class="compact-section">
+                      <span id="paramsLabel" class="compact-label">Параметры</span>
+                      <div id="paramsBlock" class="params-list">
+                        <span class="empty-data">Параметров пока нет</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="history-card card-custom">
+              <div class="history-card-header">
+                <h3 id="latestCommandsTitle">Последние команды</h3>
+
+                <button id="clearHistoryBtn" class="btn btn-light custom-btn small-action-btn">
+                  Очистить
+                </button>
+              </div>
+
+              <div id="historyList" class="history-list">
+                <p class="empty-text">История команд загружается...</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="content-grid bottom-grid">
+            <div class="report-card card-custom large-card">
+              <div class="card-header-custom">
+                <div>
+                  <h3 id="executionResultTitle">Результат выполнения</h3>
+                  <p id="commandOutputSubtitle">Здесь появятся данные после голосового запроса</p>
+                </div>
+
+                <div class="report-actions">
+                  <button id="downloadPdfBtn" class="btn btn-light custom-btn">Скачать PDF</button>
+                  <button id="buildChartBtn" class="btn btn-primary custom-btn">Построить график</button>
+                </div>
+              </div>
+
+              <div class="reports-grid">
+                <div class="report-mini-card">
+                  <p id="totalSalesLabel">Общие продажи</p>
+                  <h3 id="totalSales">0 ₽</h3>
+                  <span id="totalSalesHint">По данным таблицы sales</span>
+                </div>
+
+                <div class="report-mini-card">
+                  <p id="ordersLabel">Заказы</p>
+                  <h3 id="ordersCount">0</h3>
+                  <span id="ordersHint">Всего заказов в системе</span>
+                </div>
+
+                <div class="report-mini-card">
+                  <p id="averageCheckLabel">Средний чек</p>
+                  <h3 id="averageCheck">0 ₽</h3>
+                  <span id="averageCheckHint">Среднее значение заказа</span>
+                </div>
+              </div>
+
+              <div class="chart-box" id="chartBox">
+                <div class="chart-bar" style="height: 45%"></div>
+                <div class="chart-bar" style="height: 60%"></div>
+                <div class="chart-bar" style="height: 50%"></div>
+                <div class="chart-bar" style="height: 80%"></div>
+                <div class="chart-bar" style="height: 70%"></div>
+                <div class="chart-bar" style="height: 95%"></div>
+              </div>
+
+              <div class="command-output-panel">
+                <div id="commandDataBlock" class="command-data-grid">
+                  <div id="emptyCommandResultText" class="empty-command-result">
+                    Выполните голосовую команду, чтобы увидеть результат
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="tasks-card card-custom">
+              <h3 id="activeTasksTitle">Активные задачи</h3>
+              <div id="tasksList" class="tasks-list">
+                <p class="empty-text">Задачи загружаются...</p>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+        <div id="pageVoice" class="page-section">
+          <div class="page-inner-card">
+            <h2 id="voicePageTitle">Голосовые команды</h2>
+            <p id="voicePageDescription" class="page-description">
+              Справочник команд, которые можно использовать для управления сайтом, добавления данных и работы с отчётами.
+              В режиме постоянного ожидания перед командой произносится выбранное ключевое слово.
+            </p>
+
+            <div class="voice-command-grid">
+
+              <div class="voice-command-card card-custom">
+                <h3>Навигация по сайту</h3>
+                <div class="voice-command-list">
+                  <span>«Открой главную»</span>
+                  <span>«Открой настройки»</span>
+                  <span>«Открой заказы»</span>
+                  <span>«Открой задачи»</span>
+                  <span>«Открой отчёты»</span>
+                  <span>«Открой историю»</span>
+                  <span>«Открой помощь»</span>
+                </div>
+              </div>
+
+              <div class="voice-command-card card-custom">
+                <h3>Интерфейс и настройки</h3>
+                <div class="voice-command-list">
+                  <span>«Включи тёмную тему»</span>
+                  <span>«Включи светлую тему»</span>
+                  <span>«Переведи сайт на английский»</span>
+                  <span>«Переведи сайт на русский»</span>
+                  <span>«Сделай шрифт крупнее»</span>
+                  <span>«Сделай шрифт меньше»</span>
+                  <span>«Верни обычный шрифт»</span>
+                </div>
+              </div>
+
+              <div class="voice-command-card card-custom">
+                <h3>Работа с заказами</h3>
+                <div class="voice-command-list">
+                  <span>«Добавь заказ клиента Ромашка на сумму 25000»</span>
+                  <span>«Покажи заказ 1»</span>
+                  <span>«Найди заказ 152»</span>
+                  <span>«Клиент ООО Альфа»</span>
+                  <span>«Сумма 50000»</span>
+                  <span>«Статус в обработке»</span>
+                  <span>«Менеджер Иванов»</span>
+                </div>
+              </div>
+
+              <div class="voice-command-card card-custom">
+                <h3>Сотрудники и менеджеры</h3>
+                <div class="voice-command-list">
+                  <span>«Добавь сотрудника Сергеев Сергей должность Менеджер отдел Продажи»</span>
+                  <span>«Добавь сотрудника Кузнецов Андрей должность Аналитик отдел Отчёты»</span>
+                  <span>«ФИО Петров Пётр»</span>
+                  <span>«Должность Аналитик»</span>
+                  <span>«Отдел Отчёты»</span>
+                </div>
+              </div>
+
+              <div class="voice-command-card card-custom">
+                <h3>Работа с продажами</h3>
+                <div class="voice-command-list">
+                  <span>«Добавь продажу по заказу 1 товар Мышь Logitech количество 2 на сумму 5000»</span>
+                  <span>«Покажи продажи за март»</span>
+                  <span>«Покажи выручку за месяц»</span>
+                  <span>«Заказ 3»</span>
+                  <span>«Товар Монитор Samsung»</span>
+                  <span>«Количество 4»</span>
+                  <span>«Количество четыре»</span>
+                  <span>«Сумма 120000»</span>
+                  <span>«Дата сегодня»</span>
+                  <span>«Дата завтра»</span>
+                </div>
+              </div>
+
+              <div class="voice-command-card card-custom">
+                <h3>Работа с задачами</h3>
+                <div class="voice-command-list">
+                  <span>«Создай задачу подготовить отчёт описание Сделать отчёт за месяц исполнитель 1 приоритет высокий»</span>
+                  <span>«Покажи активные задачи»</span>
+                  <span>«Покажи просроченные задачи»</span>
+                  <span>«Название Позвонить клиенту»</span>
+                  <span>«Описание Уточнить оплату»</span>
+                  <span>«Исполнитель Сидоров»</span>
+                  <span>«Статус активная»</span>
+                  <span>«Статус завершена»</span>
+                  <span>«Приоритет высокий»</span>
+                  <span>«Приоритет низкий»</span>
+                  <span>«Срок завтра»</span>
+                </div>
+              </div>
+
+              <div class="voice-command-card card-custom">
+                <h3>Подтверждение действий</h3>
+                <div class="voice-command-list">
+                  <span>«Добавить»</span>
+                  <span>«Подтвердить»</span>
+                  <span>«Сохранить»</span>
+                  <span>«Отмена»</span>
+                  <span>«Не добавлять»</span>
+                </div>
+              </div>
+
+              <div class="voice-command-card card-custom">
+                <h3>Отчёты, график и PDF</h3>
+                <div class="voice-command-list">
+                  <span>«Сформируй складской отчёт»</span>
+                  <span>«Покажи остатки на складе»</span>
+                  <span>«Покажи отчёт по продажам»</span>
+                  <span>«Построй график»</span>
+                  <span>«Скачай PDF»</span>
+                </div>
+              </div>
+
+              <div class="voice-command-card card-custom">
+                <h3>История команд</h3>
+                <div class="voice-command-list">
+                  <span>«Открой историю»</span>
+                  <span>«Очисти историю»</span>
+                </div>
+              </div>
+
+              <div class="voice-command-card card-custom">
+                <h3>Справочный чат</h3>
+                <div class="voice-command-list">
+                  <span>«Открой помощь»</span>
+                  <span>«Как добавить заказ?»</span>
+                  <span>«Как добавить менеджера?»</span>
+                  <span>«Как создать задачу?»</span>
+                  <span>«Какие команды доступны?»</span>
+                </div>
+              </div>
+
+              <div class="voice-command-card card-custom">
+                <h3>Режимы работы ассистента</h3>
+                <div class="voice-command-list">
+                  <span>«Включи режим постоянного ожидания»</span>
+                  <span>«Переключи управление по кнопке»</span>
+                  <span>«Включи основной режим»</span>
+                  <span>«Включи запасной режим»</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div id="pageActions" class="page-section">
+          <div class="page-inner-card">
+            <h2 id="actionsPageTitle">Действия</h2>
+            <p id="actionsPageDescription" class="page-description">
+              Быстрый запуск операций без голосовой команды.
+            </p>
+
+            <div class="action-choice-grid">
+              <button id="manualCreateOrderBtn" class="action-choice-card" type="button">
+                <span id="manualCreateOrderTitle">Добавить заказ</span>
+                <small id="manualCreateOrderDescription">Открыть окно подтверждения для создания заказа</small>
+              </button>
+
+              <button id="manualCreateEmployeeBtn" class="action-choice-card" type="button">
+                <span id="manualCreateEmployeeTitle">Добавить сотрудника</span>
+                <small id="manualCreateEmployeeDescription">Создать сотрудника или менеджера через форму подтверждения</small>
+              </button>
+
+              <button id="manualCreateSaleBtn" class="action-choice-card" type="button">
+                <span id="manualCreateSaleTitle">Добавить продажу</span>
+                <small id="manualCreateSaleDescription">Выбрать заказ, товар, количество, сумму и дату продажи</small>
+              </button>
+
+              <button id="manualCreateTaskBtn" class="action-choice-card" type="button">
+                <span id="manualCreateTaskTitle">Создать задачу</span>
+                <small id="manualCreateTaskDescription">Назначить задачу сотруднику со сроком и приоритетом</small>
+              </button>
+
+              <button id="manualSendMailingBtn" class="action-choice-card" type="button">
+                <span id="manualSendMailingTitle">Сделать рассылку</span>
+                <small id="manualSendMailingDescription">Отправить текст, картинки или файлы в Telegram</small>
+              </button>
+
+              <button id="manualBuildChartBtn" class="action-choice-card" type="button">
+                <span id="manualBuildChartTitle">Построить график</span>
+                <small id="manualBuildChartDescription">Сформировать график продаж по данным таблицы sales</small>
+              </button>
+
+              <button id="manualDownloadPdfBtn" class="action-choice-card" type="button">
+                <span id="manualDownloadPdfTitle">Скачать PDF</span>
+                <small id="manualDownloadPdfDescription">Скачать PDF по последнему результату команды</small>
+              </button>
+
+              <button id="manualClearHistoryBtn" class="action-choice-card" type="button">
+                <span id="manualClearHistoryTitle">Очистить историю</span>
+                <small id="manualClearHistoryDescription">Удалить историю команд на сайте и в базе данных</small>
+              </button>
+
+              <button id="manualOpenHelpBtn" class="action-choice-card" type="button">
+                <span id="manualOpenHelpTitle">Открыть справку</span>
+                <small id="manualOpenHelpDescription">Открыть справочный чат с подсказками по командам</small>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="pageOrders" class="page-section">
+          <div class="page-inner-card">
+            <h2 id="ordersPageTitle">Заказы</h2>
+            <p id="ordersPageDescription" class="page-description">Список заказов, загруженный из таблицы orders.</p>
+            <div id="ordersPageContent" class="page-card-grid"></div>
+          </div>
+        </div>
+
+        <div id="pageTasks" class="page-section">
+          <div class="page-inner-card">
+            <h2 id="tasksPageTitle">Задачи</h2>
+            <p id="tasksPageDescription" class="page-description">Список задач сотрудников из таблицы tasks.</p>
+            <div id="tasksPageContent" class="page-card-grid"></div>
+          </div>
+        </div>
+
+        <div id="pageReports" class="page-section">
+          <div class="page-inner-card">
+            <h2 id="reportsPageTitle">Отчёты</h2>
+            <p id="reportsPageDescription" class="page-description">Сводная аналитика по продажам, заказам и задачам.</p>
+
+            <div id="reportsPageSummary" class="stats-grid page-stats"></div>
+
+            <h3 id="salesSubtitle" class="page-subtitle">Продажи</h3>
+            <div id="reportsPageContent" class="page-card-grid"></div>
+          </div>
+        </div>
+
+        <div id="pageHistory" class="page-section">
+          <div class="page-inner-card">
+            <h2 id="historyPageTitle">История команд</h2>
+            <p id="historyPageDescription" class="page-description">Последние голосовые команды, обработанные системой.</p>
+            <div id="historyPageContent" class="page-list"></div>
+          </div>
+        </div>
+
+        <div id="pageSettings" class="page-section">
+          <div class="page-inner-card">
+            <h2 id="settingsTitle">Настройки</h2>
+            <p id="settingsDescription" class="page-description">
+              Управление режимами работы нейропомощника, интерфейсом и параметрами обработки команд.
+            </p>
+
+            <div class="settings-grid">
+
+              <div class="settings-card">
+                <h4 id="nlpSettingsTitle">Режим NLP</h4>
+                <p id="nlpSettingsDescription">
+                  Выберите способ интерпретации голосовых команд.
+                </p>
+
+                <div class="mode-switcher settings-switcher">
+                  <span id="nlpModeLabel" class="mode-label">Режим:</span>
+                  <button id="settingsOllamaModeBtn" class="btn custom-btn mode-btn">Ollama</button>
+                  <button id="settingsLocalModeBtn" class="btn custom-btn mode-btn">Local parser</button>
+                </div>
+
+                <div class="setting-toggle-row mt-3">
+                  <div>
+                    <strong id="fallbackTitle">Fallback-режим</strong>
+                    <p id="fallbackDescription">Если Ollama недоступна, автоматически использовать Local parser.</p>
+                  </div>
+
+                  <label class="switch">
+                    <input id="fallbackToggle" type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="settings-card">
+                <h4 id="ollamaModelTitle">Модель Ollama</h4>
+                <p id="ollamaModelDescription">
+                  Модель, которая используется для обработки команд в режиме Ollama.
+                </p>
+
+                <div class="setting-field">
+                  <label id="ollamaModelLabel" for="ollamaModelInput">Название модели</label>
+                  <input
+                    id="ollamaModelInput"
+                    class="setting-input"
+                    type="text"
+                    value="qwen2.5:1.5b"
+                    placeholder="qwen2.5:1.5b"
+                  />
+                </div>
+
+                <button id="saveOllamaModelBtn" class="btn btn-primary custom-btn mt-3">
+                  Сохранить модель
+                </button>
+              </div>
+
+              <div class="settings-card">
+                <h4 id="whisperSettingsTitle">Распознавание речи</h4>
+                <p id="whisperSettingsDescription">
+                  Настройки модуля распознавания речи и голосовой активации.
+                </p>
+
+                <div class="setting-field">
+                  <label id="whisperModelLabel" for="whisperModelSelect">Модель Whisper</label>
+                  <select id="whisperModelSelect" class="setting-input">
+                    <option value="base">base</option>
+                    <option value="small">small</option>
+                    <option value="medium">medium</option>
+                  </select>
+                </div>
+
+                <div class="setting-field mt-3">
+                  <label id="speechLanguageLabel" for="speechLanguageSelect">Язык распознавания</label>
+                  <select id="speechLanguageSelect" class="setting-input">
+                    <option value="ru">Русский</option>
+                    <option value="en">English</option>
+                    <option value="auto">Авто</option>
+                  </select>
+                </div>
+
+                <div class="setting-field mt-3">
+                  <label id="voiceActivationModeLabel" for="voiceActivationModeSelect">
+                    Режим голосового управления
+                  </label>
+                  <select id="voiceActivationModeSelect" class="setting-input">
+                    <option value="button">По кнопке</option>
+                    <option value="wake_word">Постоянное ожидание</option>
+                  </select>
+                </div>
+
+                <div class="setting-field mt-3">
+                  <label id="wakeWordLabel" for="wakeWordInput">Ключевое слово</label>
+                  <input
+                    id="wakeWordInput"
+                    class="setting-input"
+                    type="text"
+                    value="помощник"
+                    placeholder="помощник"
+                  />
+                </div>
+
+                <div class="voice-activation-status mt-3">
+                  <span id="wakeWordStatusDot" class="wake-dot inactive"></span>
+                  <span id="wakeWordStatusText">Режим ожидания выключен</span>
+                </div>
+              </div>
+
+              <div class="settings-card">
+                <h4 id="interfaceSettingsTitle">Интерфейс</h4>
+                <p id="interfaceSettingsDescription">
+                  Настройки отображения dashboard и результатов команд.
+                </p>
+
+                <div class="setting-field">
+                  <label id="siteLanguageLabel" for="siteLanguageSelect">Язык интерфейса</label>
+                  <select id="siteLanguageSelect" class="setting-input">
+                    <option value="ru">Русский</option>
+                    <option value="en">English</option>
+                  </select>
+                </div>
+
+                <div class="setting-field mt-3">
+                  <label id="siteThemeLabel" for="siteThemeSelect">Тема интерфейса</label>
+                  <select id="siteThemeSelect" class="setting-input">
+                    <option value="light">Светлая</option>
+                    <option value="dark">Тёмная</option>
+                  </select>
+                </div>
+
+                <div class="setting-toggle-row mt-3">
+                  <div>
+                    <strong id="detailedOutputTitle">Подробный вывод</strong>
+                    <p id="detailedOutputDescription">Показывать больше полей в карточках результата.</p>
+                  </div>
+
+                  <label class="switch">
+                    <input id="detailedOutputToggle" type="checkbox" />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-toggle-row">
+                  <div>
+                    <strong id="techInfoTitle">Техническая информация</strong>
+                    <p id="techInfoDescription">Показывать источник обработки, fallback и параметры.</p>
+                  </div>
+
+                  <label class="switch">
+                    <input id="techInfoToggle" type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="settings-card">
+                <h4 id="dashboardSettingsTitle">Обновление dashboard</h4>
+                <p id="dashboardSettingsDescription">
+                  Настройки автоматического обновления главной панели.
+                </p>
+
+                <div class="setting-toggle-row">
+                  <div>
+                    <strong id="autoRefreshTitle">Автообновление</strong>
+                    <p id="autoRefreshDescription">Периодически обновлять статистику без перезагрузки страницы.</p>
+                  </div>
+
+                  <label class="switch">
+                    <input id="autoRefreshToggle" type="checkbox" />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-field mt-3">
+                  <label id="refreshIntervalLabel" for="refreshIntervalInput">Интервал, секунд</label>
+                  <input
+                    id="refreshIntervalInput"
+                    class="setting-input"
+                    type="number"
+                    min="5"
+                    max="300"
+                    value="30"
+                  />
+                </div>
+              </div>
+
+              <div class="settings-card">
+                <h4 id="businessSettingsTitle">Бизнес-логика</h4>
+                <p id="businessSettingsDescription">
+                  Параметры выполнения команд, влияющих на данные системы.
+                </p>
+
+                <div class="setting-toggle-row">
+                  <div>
+                    <strong id="saveHistoryTitle">Сохранять историю</strong>
+                    <p id="saveHistoryDescription">Записывать распознанные команды и результаты выполнения.</p>
+                  </div>
+
+                  <label class="switch">
+                    <input id="saveHistoryToggle" type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-toggle-row">
+                  <div>
+                    <strong id="confirmActionsTitle">Подтверждать действия</strong>
+                    <p id="confirmActionsDescription">Запрашивать подтверждение перед созданием задач и изменением данных.</p>
+                  </div>
+
+                  <label class="switch">
+                    <input id="confirmActionsToggle" type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="settings-card">
+                <h4 id="reportsSettingsTitle">Отчёты</h4>
+                <p id="reportsSettingsDescription">
+                  Настройки периода и формата отчётности.
+                </p>
+
+                <div class="setting-field">
+                  <label id="defaultReportPeriodLabel" for="defaultReportPeriodSelect">Период отчёта по умолчанию</label>
+                  <select id="defaultReportPeriodSelect" class="setting-input">
+                    <option value="month">Текущий месяц</option>
+                    <option value="quarter">Квартал</option>
+                    <option value="year">Год</option>
+                  </select>
+                </div>
+
+                <div class="setting-field mt-3">
+                  <label id="exportFormatLabel" for="exportFormatSelect">Формат экспорта</label>
+                  <select id="exportFormatSelect" class="setting-input">
+                    <option value="pdf">PDF</option>
+                    <option value="xlsx">Excel</option>
+                    <option value="csv">CSV</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="settings-card">
+                <h4 id="systemStateTitle">Состояние системы</h4>
+                <p id="systemStateDescription">
+                  Текущие параметры работы приложения.
+                </p>
+
+                <div class="system-info-list">
+                  <div>
+                    <span>Backend</span>
+                    <strong>FastAPI</strong>
+                  </div>
+
+                  <div>
+                    <span id="databaseLabel">База данных</span>
+                    <strong>Supabase PostgreSQL</strong>
+                  </div>
+
+                  <div>
+                    <span id="speechModuleLabel">Распознавание речи</span>
+                    <strong>faster-whisper</strong>
+                  </div>
+
+                  <div>
+                    <span id="nlpModuleLabel">NLP-модуль</span>
+                    <strong id="currentNlpModeText">—</strong>
+                  </div>
+
+                  <div>
+                    <span id="interfaceLanguageStateLabel">Язык интерфейса</span>
+                    <strong id="currentLanguageText">Русский</strong>
+                  </div>
+
+                  <div>
+                    <span id="interfaceThemeStateLabel">Тема интерфейса</span>
+                    <strong id="currentThemeText">Светлая</strong>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <div id="confirmActionOverlay" class="confirm-overlay hidden">
+    <div class="confirm-modal">
+      <div class="confirm-modal-header">
+        <h3 id="confirmActionTitle">Подтверждение действия</h3>
+        <p id="confirmActionSubtitle">Проверьте данные перед добавлением в базу</p>
+      </div>
+
+      <div id="confirmActionBody" class="confirm-modal-body">
+        <!-- Данные действия -->
+      </div>
+
+      <div class="confirm-modal-actions">
+        <button id="confirmActionCancelBtn" class="btn btn-light custom-btn">
+          Отмена
+        </button>
+
+        <button id="confirmActionApplyBtn" class="btn btn-primary custom-btn">
+          Добавить
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="helpChatWidget" class="help-chat-widget">
+    <button id="helpChatToggleBtn" class="help-chat-toggle" type="button">
+      <span class="help-chat-toggle-icon">💬</span>
+      <span class="help-chat-toggle-text">Помощь</span>
+    </button>
+
+    <div id="helpChatPanel" class="help-chat-panel hidden">
+      <div class="help-chat-header">
+        <div>
+          <p class="help-chat-label">Справочный чат</p>
+          <h3>Помощь по ассистенту</h3>
+        </div>
+
+        <button id="helpChatCloseBtn" class="help-chat-close" type="button">×</button>
+      </div>
+
+      <div class="help-chat-intro">
+        Спросите, как пользоваться голосовыми командами, добавлять записи, строить графики или скачивать PDF.
+      </div>
+
+      <div class="help-chat-quick">
+        <button class="help-quick-btn" data-help-question="Как добавить заказ?">Заказ</button>
+        <button class="help-quick-btn" data-help-question="Как добавить менеджера?">Менеджер</button>
+        <button class="help-quick-btn" data-help-question="Как создать задачу?">Задача</button>
+        <button class="help-quick-btn" data-help-question="Как добавить продажу?">Продажа</button>
+        <button class="help-quick-btn" data-help-question="Какие команды доступны?">Все команды</button>
+      </div>
+
+      <div id="helpChatMessages" class="help-chat-messages">
+        <div class="help-message assistant">
+          <div class="help-message-role">Ассистент</div>
+          <div class="help-message-text">
+            Здравствуйте! Я помогу разобраться с командами сайта. Например, спросите: «Как добавить заказ?»
+          </div>
+        </div>
+      </div>
+
+      <div class="help-chat-form">
+        <input
+          id="helpChatInput"
+          class="help-chat-input"
+          type="text"
+          placeholder="Например: как добавить менеджера?"
+        />
+
+        <button id="helpChatSendBtn" class="help-chat-send" type="button">
+          Отправить
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
