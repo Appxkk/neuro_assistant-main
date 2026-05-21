@@ -12,6 +12,17 @@ from app.services.ui_capabilities import (
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434")
 OLLAMA_UI_MODEL = os.getenv("OLLAMA_UI_MODEL", os.getenv("OLLAMA_MODEL", "qwen2.5:1.5b"))
+OLLAMA_ENABLED = os.getenv("OLLAMA_ENABLED", "true").lower().strip() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+    "да",
+}
+try:
+    OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "8"))
+except Exception:
+    OLLAMA_TIMEOUT = 8
 
 
 def extract_json(text: str) -> dict | None:
@@ -36,13 +47,26 @@ def extract_json(text: str) -> dict | None:
         return None
 
 
+def is_ollama_available() -> bool:
+    if not OLLAMA_ENABLED or not OLLAMA_URL:
+        return False
+
+    try:
+        with httpx.Client(timeout=OLLAMA_TIMEOUT) as client:
+            response = client.get(f"{OLLAMA_URL}/api/tags")
+
+        return response.status_code < 400
+    except Exception:
+        return False
+
+
 def interpret_ui_command_with_ollama(user_text: str) -> dict | None:
     """
     Пытается понять неизвестную UI-команду через Ollama.
     Ollama получает список возможностей сайта и может вернуть только разрешенное действие.
     """
 
-    if not user_text:
+    if not user_text or not is_ollama_available():
         return None
 
     system_prompt = f"""
@@ -132,7 +156,7 @@ def interpret_ui_command_with_ollama(user_text: str) -> dict | None:
     }
 
     try:
-        with httpx.Client(timeout=15) as client:
+        with httpx.Client(timeout=OLLAMA_TIMEOUT) as client:
             response = client.post(f"{OLLAMA_URL}/api/chat", json=payload)
             response.raise_for_status()
 

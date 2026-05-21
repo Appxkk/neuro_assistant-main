@@ -15,6 +15,7 @@ from app.services.business_service import (
 from app.services.pending_action_service import parse_pending_action_command
 from app.services.ui_command_service import parse_ui_command
 from app.services.ui_llm_service import interpret_ui_command_with_ollama
+from app.services.cloud_llm_service import interpret_ui_command_with_cloud
 
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
@@ -117,6 +118,13 @@ def process_recognized_text(recognized_text: str):
         except Exception as ui_llm_error:
             ui_command = None
             print(f"Ollama UI parser error: {str(ui_llm_error)}")
+
+    if not ui_command:
+        try:
+            ui_command = interpret_ui_command_with_cloud(recognized_text)
+        except Exception as ui_cloud_error:
+            ui_command = None
+            print(f"OpenRouter UI parser error: {str(ui_cloud_error)}")
 
     if ui_command:
         intent = ui_command.get("intent", "unknown")

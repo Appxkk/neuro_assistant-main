@@ -2,11 +2,24 @@ import os
 import httpx
 from dotenv import load_dotenv
 
+from app.services.cloud_llm_service import ask_help_with_cloud
+
 
 load_dotenv()
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:1.5b")
+OLLAMA_ENABLED = os.getenv("OLLAMA_ENABLED", "true").lower().strip() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+    "да",
+}
+try:
+    OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "8"))
+except Exception:
+    OLLAMA_TIMEOUT = 8
 
 
 WAKE_WORD_PLACEHOLDER = "{wake_word}"
@@ -516,7 +529,23 @@ def get_default_help_answer() -> dict:
     )
 
 
+def is_ollama_available() -> bool:
+    if not OLLAMA_ENABLED or not OLLAMA_URL:
+        return False
+
+    try:
+        with httpx.Client(timeout=OLLAMA_TIMEOUT) as client:
+            response = client.get(f"{OLLAMA_URL}/api/tags")
+
+        return response.status_code < 400
+    except Exception:
+        return False
+
+
 def ask_ollama_help(question: str) -> dict | None:
+    if not is_ollama_available():
+        return None
+
     system_prompt = f"""
 Ты справочный помощник веб-сайта нейропомощника.
 Отвечай только по функционалу этого сайта.
@@ -609,7 +638,7 @@ def ask_ollama_help(question: str) -> dict | None:
     }
 
     try:
-        with httpx.Client(timeout=8) as client:
+        with httpx.Client(timeout=OLLAMA_TIMEOUT) as client:
             response = client.post(
                 f"{OLLAMA_URL}/api/generate",
                 json=payload,
@@ -640,5 +669,10 @@ def get_help_answer(question: str) -> dict:
 
     if ollama_answer:
         return ollama_answer
+
+    cloud_answer = ask_help_with_cloud(question, WAKE_WORD_PLACEHOLDER)
+
+    if cloud_answer:
+        return cloud_answer
 
     return get_default_help_answer()

@@ -4,35 +4,105 @@ import json
 import requests
 from typing import Any
 from dotenv import load_dotenv
-from app.services.mode_service import get_llm_mode
+
+from app.services.cloud_llm_service import interpret_command_with_cloud
 
 load_dotenv()
 
 
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "hybrid").lower().strip()
+LOCAL_PARSER_ENABLED = os.getenv("LOCAL_PARSER_ENABLED", "true").lower().strip() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+    "да",
+}
+OLLAMA_ENABLED = os.getenv("OLLAMA_ENABLED", "true").lower().strip() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+    "да",
+}
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:1.5b")
+try:
+    OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "8"))
+except Exception:
+    OLLAMA_TIMEOUT = 8
 
 
 def interpret_command(user_text: str) -> dict[str, Any]:
     """
-    Главная функция интерпретации команды.
-    Режим переключается через веб-интерфейс:
-    - ollama
-    - local_parser
+    Главная функция интерпретации команды:
+    Local parser -> Ollama -> OpenRouter -> fallback.
     """
 
-    current_mode = get_llm_mode()
+    fallback_reasons: list[str] = []
 
-    if current_mode == "ollama":
+    if LOCAL_PARSER_ENABLED:
         try:
-            return interpret_with_ollama(user_text)
-        except Exception as error:
-            result = interpret_with_local_parser(user_text)
-            result["fallback"] = True
-            result["fallback_reason"] = str(error)
-            return result
+            local_result = interpret_with_local_parser(user_text)
 
-    return interpret_with_local_parser(user_text)
+            if local_result.get("intent") != "unknown":
+                return local_result
+
+            fallback_reasons.append("local_parser_unknown")
+        except Exception as error:
+            fallback_reasons.append(f"local_parser_error: {error}")
+
+    if OLLAMA_ENABLED and OLLAMA_URL and is_ollama_available():
+        try:
+            ollama_result = interpret_with_ollama(user_text)
+
+            if ollama_result.get("intent") != "unknown":
+                if fallback_reasons:
+                    ollama_result["fallback"] = True
+                    ollama_result["fallback_reason"] = "local_parser_unknown"
+
+                return ollama_result
+
+            fallback_reasons.append("ollama_unknown")
+        except Exception as error:
+            fallback_reasons.append(f"ollama_error: {error}")
+    else:
+        fallback_reasons.append("ollama_unavailable")
+
+    cloud_reason = "local_parser_and_ollama_unavailable"
+
+    if "ollama_unknown" in fallback_reasons:
+        cloud_reason = "local_parser_and_ollama_unknown"
+
+    cloud_result = interpret_command_with_cloud(
+        user_text,
+        fallback_reason=cloud_reason,
+    )
+
+    if cloud_result:
+        return cloud_result
+
+    return {
+        "intent": "unknown",
+        "parameters": empty_parameters(),
+        "source": "hybrid_fallback",
+        "fallback": True,
+        "fallback_reason": "; ".join(fallback_reasons) or "all_llm_unavailable",
+    }
+
+
+def is_ollama_available() -> bool:
+    if not OLLAMA_ENABLED or not OLLAMA_URL:
+        return False
+
+    try:
+        response = requests.get(
+            f"{OLLAMA_URL}/api/tags",
+            timeout=OLLAMA_TIMEOUT,
+        )
+        return response.status_code < 400
+    except Exception:
+        return False
 
 
 def empty_parameters() -> dict[str, Any]:
@@ -246,7 +316,7 @@ def interpret_with_ollama(user_text: str) -> dict[str, Any]:
             "stream": False,
             "format": "json"
         },
-        timeout=60
+        timeout=OLLAMA_TIMEOUT
     )
 
     response.raise_for_status()
