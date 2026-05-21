@@ -3,3 +3,4 @@ __pycache__/
 .env
 uploads/
 postgresqlpostgres[hqCVoFHw0ITSFZ7z.txt
+auth_migration.sql

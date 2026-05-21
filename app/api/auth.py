@@ -30,6 +30,12 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
 
 
+class ChangeCredentialsRequest(BaseModel):
+    current_password: str
+    new_username: str | None = None
+    new_password: str | None = None
+
+
 class AccessLevelRequest(BaseModel):
     access_level: str
 
@@ -84,32 +90,74 @@ def me(request: Request):
 
 @router.post("/change-password")
 def change_password(data: ChangePasswordRequest, request: Request, response: Response):
+    return change_credentials(
+        ChangeCredentialsRequest(
+            current_password=data.current_password,
+            new_password=data.new_password,
+        ),
+        request,
+        response,
+    )
+
+
+@router.post("/change-credentials")
+def change_credentials(data: ChangeCredentialsRequest, request: Request, response: Response):
     user = get_current_user_from_request(request)
 
     if not user:
         raise HTTPException(status_code=401, detail="Требуется авторизация")
-
-    if len(data.new_password.strip()) < 8:
-        raise HTTPException(
-            status_code=400,
-            detail="Новый пароль должен быть не короче 8 символов",
-        )
 
     employee = find_employee_by_username(user.get("username", ""))
 
     if not employee or not verify_password(data.current_password, employee.get("password_hash")):
         raise HTTPException(status_code=400, detail="Текущий пароль указан неверно")
 
+    update_data = {}
+
+    new_username = (data.new_username or "").strip()
+    new_password = data.new_password or ""
+
+    if new_username and new_username != employee.get("username"):
+        if len(new_username) < 3:
+            raise HTTPException(
+                status_code=400,
+                detail="Новый логин должен быть не короче 3 символов",
+            )
+
+        existing_employee = find_employee_by_username(new_username)
+
+        if existing_employee and int(existing_employee["id"]) != int(employee["id"]):
+            raise HTTPException(
+                status_code=400,
+                detail="Такой логин уже используется",
+            )
+
+        update_data["username"] = new_username
+
+    if new_password:
+        if len(new_password.strip()) < 6:
+            raise HTTPException(
+                status_code=400,
+                detail="Новый пароль должен быть не короче 6 символов",
+            )
+
+        update_data["password_hash"] = hash_password(new_password)
+        update_data["must_change_password"] = False
+
+    if not update_data:
+        raise HTTPException(
+            status_code=400,
+            detail="Укажите новый логин или новый пароль",
+        )
+
     updated_rows = update_employee_auth(
         int(employee["id"]),
-        {
-            "password_hash": hash_password(data.new_password),
-            "must_change_password": False,
-        },
+        update_data,
     )
 
     updated_employee = updated_rows[0] if updated_rows else {
         **employee,
+        **update_data,
         "must_change_password": False,
     }
 
@@ -118,7 +166,7 @@ def change_password(data: ChangePasswordRequest, request: Request, response: Res
 
     return {
         "status": "success",
-        "message": "Пароль обновлён",
+        "message": "Учётные данные обновлены",
         "user": make_session_payload(updated_employee),
     }
 

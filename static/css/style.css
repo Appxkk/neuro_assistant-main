@@ -124,6 +124,7 @@ select {
   min-height: 100vh;
 }
 
+
 .sidebar {
   background: var(--sidebar-bg);
   color: #ffffff;
@@ -137,9 +138,6 @@ select {
   height: 100vh;
 }
 
-.sidebar-header {
-  margin-bottom: 28px;
-}
 
 .sidebar-subtitle {
   margin: 0 0 8px;

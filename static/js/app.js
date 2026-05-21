@@ -89,6 +89,7 @@ const currentUserAccessLevel = document.getElementById("currentUserAccessLevel")
 const logoutBtn = document.getElementById("logoutBtn");
 const changePasswordBtn = document.getElementById("changePasswordBtn");
 const passwordOverlay = document.getElementById("passwordOverlay");
+const newUsernameInput = document.getElementById("newUsernameInput");
 const currentPasswordInput = document.getElementById("currentPasswordInput");
 const newPasswordInput = document.getElementById("newPasswordInput");
 const passwordChangeMessage = document.getElementById("passwordChangeMessage");
@@ -1221,6 +1222,10 @@ async function loadCurrentUser() {
 }
 
 function showPasswordModal(message = "") {
+  if (newUsernameInput) {
+    newUsernameInput.value = currentUser?.username || "";
+  }
+
   if (passwordChangeMessage) {
     passwordChangeMessage.textContent = message;
     passwordChangeMessage.classList.remove("error");
@@ -1233,6 +1238,7 @@ function hidePasswordModal() {
   passwordOverlay?.classList.add("hidden");
 
   if (currentPasswordInput) currentPasswordInput.value = "";
+  if (newUsernameInput) newUsernameInput.value = "";
   if (newPasswordInput) newPasswordInput.value = "";
 }
 
@@ -1250,13 +1256,14 @@ async function changePassword() {
   passwordChangeMessage.textContent = "";
   passwordChangeMessage.classList.remove("error");
 
-  const response = await fetch("/api/auth/change-password", {
+  const response = await fetch("/api/auth/change-credentials", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
       current_password: currentPasswordInput.value,
+      new_username: newUsernameInput?.value?.trim() || currentUser?.username || "",
       new_password: newPasswordInput.value,
     }),
   });
@@ -1270,7 +1277,11 @@ async function changePassword() {
   }
 
   currentUser = data.user;
-  passwordChangeMessage.textContent = "Пароль обновлён";
+  if (currentUserName) {
+    currentUserName.textContent = currentUser?.full_name || currentUser?.username || "—";
+  }
+
+  passwordChangeMessage.textContent = "Учётные данные обновлены";
   setTimeout(hidePasswordModal, 700);
 }
 
